@@ -15,6 +15,15 @@ on:
         description: "Terraform root module directory relative to repo root"
         type: string
         default: "infra/stack"
+      backend-config:
+        description: >-
+          Path to a -backend-config file (e.g. envs/prod/backend.hcl), relative to
+          `chdir`. Required whenever the root module's backend block has no inline
+          bucket/key/region (the common pattern for repos with per-env state).
+          Backend config values (bucket, key, region, lock table) are not secrets —
+          they're committed alongside the .tfvars for the same environment.
+        type: string
+        default: ""
       aws-region:
         description: "AWS region"
         type: string
@@ -34,10 +43,6 @@ on:
         default: false
     secrets:
       AWS_ROLE_ARN:
-        required: false
-      TF_STATE_BUCKET:
-        required: false
-      TF_STATE_KEY:
         required: false
 
 jobs:
@@ -89,10 +94,13 @@ jobs:
         env:
           CHDIR: ${{ inputs.chdir }}
           DRY_RUN: ${{ inputs.dry-run }}
+          BACKEND_CONFIG: ${{ inputs.backend-config }}
         run: |
           set -euo pipefail
           if [[ "$DRY_RUN" == "true" ]]; then
             terraform -chdir="$CHDIR" init -backend=false -input=false
+          elif [[ -n "$BACKEND_CONFIG" ]]; then
+            terraform -chdir="$CHDIR" init -input=false -backend-config="$BACKEND_CONFIG"
           else
             terraform -chdir="$CHDIR" init -input=false
           fi
