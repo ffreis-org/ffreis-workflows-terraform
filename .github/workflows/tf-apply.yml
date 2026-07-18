@@ -39,6 +39,13 @@ on:
         required: false
         type: boolean
         default: false
+      runner:
+        description: |
+          JSON-encoded runner label(s). Default: GitHub-hosted ubuntu-latest.
+          Self-hosted homelab box (private repos only): '["self-hosted","local"]'
+        required: false
+        type: string
+        default: '["ubuntu-latest"]'
     secrets:
       AWS_ROLE_ARN:
         required: false
@@ -51,7 +58,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     environment: ${{ inputs.environment }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
