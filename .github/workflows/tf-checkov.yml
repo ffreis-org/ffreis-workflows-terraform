@@ -24,6 +24,13 @@ on:
         required: false
         type: boolean
         default: false
+      runner:
+        description: |
+          JSON-encoded runner label(s). Default: GitHub-hosted ubuntu-latest.
+          Self-hosted homelab box (private repos only): '["self-hosted","local"]'
+        required: false
+        type: string
+        default: '["ubuntu-latest"]'
 
 jobs:
   checkov:
@@ -32,7 +39,7 @@ jobs:
     name: Compliance scan (checkov)
     permissions:
       contents: read
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
@@ -52,7 +59,8 @@ jobs:
             "checkov==${CHECKOV_VERSION}" -d /tmp/checkov-wheel
           echo "${CHECKOV_SHA256}  /tmp/checkov-wheel/checkov-${CHECKOV_VERSION}-py3-none-any.whl" \
             | sha256sum -c
-          pip install --only-binary=:all: /tmp/checkov-wheel/checkov-${CHECKOV_VERSION}-py3-none-any.whl
+          # scan-fix(shellcheck:SC2086): quoted the wheel path — word-splitting/globbing on ${CHECKOV_VERSION}
+          pip install --only-binary=:all: "/tmp/checkov-wheel/checkov-${CHECKOV_VERSION}-py3-none-any.whl"
 
       - name: Run Checkov (with soft-fail, with skip-check)
         if: ${{ inputs.soft-fail && inputs.skip-check != '' }}
